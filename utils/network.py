@@ -170,6 +170,18 @@ class ImageCompressor(tf.keras.layers.Layer):
         total_bits = tf.reduce_sum(tf.math.log(likelihoods)) / (-np.log(2))
         return x_tilde, total_bits
 
+    def compress(self, tensor):
+        y = self.analysis_transform(tensor)
+        string = self.entropy_bottleneck.compress(y)
+        return string, tf.shape(tensor)[1:-1], tf.shape(y)[1:-1]
+
+    def decompress(self, string, x_shape, y_shape):
+        y_shape = tf.concat([y_shape, [self.num_filters]], axis=0)
+        y_hat = self.entropy_bottleneck.decompress(
+            string, y_shape, channels=self.num_filters)
+        x_hat = self.synthesis_transform(y_hat)
+        x_hat = x_hat[0, :x_shape[0], :x_shape[1], :]
+        return x_hat
 
 class VideoCompressor(tf.keras.layers.Layer):
     """
@@ -199,3 +211,20 @@ class VideoCompressor(tf.keras.layers.Layer):
                                 tf.cast(batch_size * height * width, tf.float32))
 
         return clipped_recon_image, mse_loss, bpp_feature
+
+    def compress(self, prevreconstructed, tensecond):
+        tenflow = self.ofnet(prevreconstructed, tensecond)
+        compflow, cfx_shape, cfy_shape = self.ofcomp.compress(tenflow)
+        reconflow = self.ofcomp(tenflow)
+        motionCompensated = warp(prevreconstructed, reconflow[0])
+        res = tensecond - motionCompensated
+        compres, rex_shape, rey_shape = self.rescomp.compress((res))
+        return compflow, cfx_shape, cfy_shape, compres, rex_shape, rey_shape
+
+    def decompress(self, prevreconstructed, compflow, cfx_shape, cfy_shape, compres, rex_shape, rey_shape):
+        reconflow = self.ofcomp.decompress(compflow, cfx_shape, cfy_shape)
+        reconres = self.rescomp.decompress(compres, rex_shape, rey_shape)
+        motionCompensated = warp(prevreconstructed, reconflow)
+        recon_image = motionCompensated + reconres
+        clipped_recon_image = tf.clip_by_value(recon_image, 0, 1)
+        return clipped_recon_image
