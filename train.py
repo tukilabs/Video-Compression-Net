@@ -4,17 +4,46 @@ import numpy as np
 from PIL import Image
 import os
 import pickle as pkl
-import math
+import argparse
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--chkfile", "-c", default="checkpoints/tfvideocomp.chk",
+                        help="Checkpointing file")
+
+    parser.add_argument("--pklfile", "-p", default="checkpoints/tfvideocomp.pkl",
+                        help="Pkl file to save weights of the trained network")
+
+    parser.add_argument("--input", "-i", default="vimeo_septuplet/sequences/",
+                        help="Directory where training data lie. The structure of the directory should be like:"
+                             "vimeo_septuplet/sequences/00001/"
+                             "vimeo_septuplet/sequences/00002"
+                             "..............................."
+                             "For each vimeo_septuplet/sequences/x there should be subfolders like:"
+                             "00001/0001"
+                             "00001/002"
+                             "........."
+                             "Download dataset for more information. For other dataset, you can parse the input"
+                             "in your own way")
+
+    parser.add_argument("--frequency", "-f", type=int, default=25,
+                        help = "Number of steps to saving the checkpoints")
+
+    parser.add_argument("--restore", "-r",  action="store_true",
+                        help = "Whether to restore the checkpoints to continue interrupted training, OR"
+                               "Start training from the beginning")
+
+    parseargs = parser.parse_args()
+    return parseargs
+
 
 if __name__ == "__main__":
+    args = parse_args()
     net = VideoCompressor()
-    chkfile = "checkpoints/tfvideocomp.chk"
-    pklfile = "checkpoints/tfvideocomp.pkl"
-    checkpointFrequency = 25
-    direc = "vimeo_septuplet/sequences/"
     subdircount = 0
 
-    for item in os.listdir(direc):
+    for item in os.listdir(args.input):
         subdircount += 1
 
     tfprvs = tf.placeholder(tf.float32, shape=[4, 256, 448, 3], name="first_frame")
@@ -23,9 +52,11 @@ if __name__ == "__main__":
     l_r = tf.placeholder(tf.float32, shape=[], name='learning_rate')
     lamda = tf.placeholder(tf.int16, shape=[], name="train_lambda")
 
-    _, mse, bpp = net(tfprvs, tfnext)
+    recon, mse, bpp = net(tfprvs, tfnext)
     train_loss = tf.cast(lamda, tf.float32) * mse + bpp
     train = tf.train.AdamOptimizer(learning_rate=l_r).minimize(train_loss)
+    aux_step1 = tf.train.AdamOptimizer(learning_rate=1e-4).minimize(net.ofcomp.entropy_bottleneck.losses[0])
+    aux_step2 = tf.train.AdamOptimizer(learning_rate=1e-4).minimize(net.rescomp.entropy_bottleneck.losses[0])
 
     train_epoch = tf.get_variable("train_epoch", initializer=tf.constant(0))
     tfvideo_batch = tf.get_variable("tfvideo_batch", initializer=tf.constant(0))
@@ -42,14 +73,15 @@ if __name__ == "__main__":
 
     saver = tf.train.Saver()
 
-    starting = False
+    starting = args.restore
 
     with tf.Session() as sess:
         sess.run(init)
-        # with open("checkpoints/spymodeltf.pkl", "rb") as f:
-        #     net.ofnet.set_weights(pkl.load(f))
+        with open(args.pklfile, "rb") as f:
+            net.set_weights(pkl.load(f))
+
         if starting:
-            saver.restore(sess, chkfile)
+            saver.restore(sess, args.chkfile)
 
         load_epoch = train_epoch.eval() if starting else 0
         lr = 1e-4
@@ -60,17 +92,17 @@ if __name__ == "__main__":
             load_dir = directory.eval() if starting else 1
 
             for i in range(load_dir, subdircount + 1):
-                subdir = direc + str(i).zfill(5) + '/'
+                subdir = args.input + str(i).zfill(5) + '/'
                 subsubdircount = 0
                 for item in os.listdir(subdir):
                     subsubdircount += 1
 
                 start_video_batch = tfvideo_batch.eval() if starting else 0
 
-                num_video_batch = math.floor(subsubdircount / 4)
+                num_video_batch = subsubdircount // 4
                 starting = False
 
-                for video_batch in range(start_video_batch, 1):
+                for video_batch in range(start_video_batch, num_video_batch):
                     for batch in range(1, 8):
                         bat = subdir + str(4 * video_batch + 1).zfill(4) + '/im' + str(batch) + '.png'
                         bat = np.array(Image.open(bat)).astype(np.float32) * (1.0 / 255.0)
@@ -85,10 +117,14 @@ if __name__ == "__main__":
                             prevReconstructed = bat
 
                         else:
-                            recloss, rate, _ = sess.run([mse, bpp, train],
-                                                        feed_dict={tfprvs: prevReconstructed, tfnext: bat, l_r: lr,
-                                                                   lamda: lmda})
-                            prevReconstructed = bat
+                            recloss, rate, rec, _, _, _, _, _ = sess.run([mse, bpp, recon, train, aux_step1,
+                                                                     net.ofcomp.entropy_bottleneck.updates[0],
+                                                                     aux_step2,
+                                                                     net.rescomp.entropy_bottleneck.updates[0]],
+                                                                    feed_dict={tfprvs: prevReconstructed,
+                                                                               tfnext: bat, l_r: lr,
+                                                                               lamda: lmda})
+                            prevReconstructed = rec
 
                     increment_video_batch.op.run()
                     print("recon loss = {:.8f}, bpp = {:.8f}, video = {}, directory = {}, epoch = {}".format(recloss,
@@ -96,10 +132,10 @@ if __name__ == "__main__":
                                                                                                              video_batch,
                                                                                                              i, epoch))
                     # print(tfvideo_batch.eval(), directory.eval())
-                    if video_batch % checkpointFrequency == 0:
+                    if video_batch % args.frequency == 0:
                         weights = net.get_weights()
-                        # pkl.dump(weights, open(pklfile, "wb"))
-                        # saver.save(sess, chkfile)
+                        pkl.dump(weights, open(args.pklfile, "wb"))
+                        saver.save(sess, args.chkfile)
 
                 init_video_batch_updater.op.run()
                 increment_directory.op.run()

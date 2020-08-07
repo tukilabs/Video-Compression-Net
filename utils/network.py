@@ -66,6 +66,11 @@ class SpyNetwork(tf.keras.layers.Layer):
         for intLevel in range(len(tenfirst)):
             tenupsampled = tf.image.resize_bilinear(tenflow, [tenflow.shape[1] * 2, tenflow.shape[2] * 2]) * 2.0
 
+            if tenupsampled.shape[1] != tenfirst[intLevel].shape[1] or tenupsampled.shape[2] != tenfirst[intLevel].shape[2]:
+                tenupsampled = tf.pad(tenupsampled, [[0, 0], [tenfirst[intLevel].shape[1] - tenupsampled.shape[1], 0],
+                                                     [tenfirst[intLevel].shape[2] - tenupsampled.shape[2], 0],[0, 0]],
+                                      "SYMMETRIC")
+
             tenflow = self.netBasic[intLevel](
                 tf.concat(
                     [tenfirst[intLevel], warp(tensecond[intLevel], -tenupsampled), tenupsampled], 3)
@@ -173,7 +178,13 @@ class ImageCompressor(tf.keras.layers.Layer):
     def compress(self, tensor):
         y = self.analysis_transform(tensor)
         string = self.entropy_bottleneck.compress(y)
-        return string, tf.shape(tensor)[1:-1], tf.shape(y)[1:-1]
+
+        y_hat, likelihoods = self.entropy_bottleneck(y, training=False)
+
+        eval_bpp = tf.reduce_sum(tf.log(likelihoods)) / (-np.log(2))
+        return string, tf.shape(tensor)[1:-1], tf.shape(y)[1:-1], eval_bpp
+        # return string, tf.shape(tensor)[1:-1], tf.shape(y)[1:-1]
+
 
     def decompress(self, string, x_shape, y_shape):
         y_shape = tf.concat([y_shape, [self.num_filters]], axis=0)
@@ -214,12 +225,16 @@ class VideoCompressor(tf.keras.layers.Layer):
 
     def compress(self, prevreconstructed, tensecond):
         tenflow = self.ofnet(prevreconstructed, tensecond)
-        compflow, cfx_shape, cfy_shape = self.ofcomp.compress(tenflow)
-        reconflow = self.ofcomp(tenflow)
-        motionCompensated = warp(prevreconstructed, reconflow[0])
+        compflow, cfx_shape, cfy_shape, of_bpp = self.ofcomp.compress(tenflow)
+        reconflow = self.ofcomp.decompress(compflow, cfx_shape, cfy_shape)
+        motionCompensated = warp(prevreconstructed, reconflow)
         res = tensecond - motionCompensated
-        compres, rex_shape, rey_shape = self.rescomp.compress((res))
-        return compflow, cfx_shape, cfy_shape, compres, rex_shape, rey_shape
+        compres, rex_shape, rey_shape, res_bpp = self.rescomp.compress((res))
+        reconres = self.rescomp.decompress(compres, rex_shape, rey_shape)
+        recon_image = motionCompensated + reconres
+        clipped_recon_image = tf.clip_by_value(recon_image, 0, 1)
+        return compflow, cfx_shape, cfy_shape, compres, rex_shape, rey_shape, clipped_recon_image
+
 
     def decompress(self, prevreconstructed, compflow, cfx_shape, cfy_shape, compres, rex_shape, rey_shape):
         reconflow = self.ofcomp.decompress(compflow, cfx_shape, cfy_shape)

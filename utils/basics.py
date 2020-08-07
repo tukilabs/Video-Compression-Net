@@ -134,7 +134,7 @@ def warp(teninput, tenflow):
 
 
 def quantize_image(image):
-    image = np.reshape(image, (256, 448, 3))
+    image = np.reshape(image, (image.shape[1], image.shape[2], 3))
     image = tf.convert_to_tensor(image)
     image = tf.round(image * 255)
     image = tf.saturate_cast(image, tf.uint8)
