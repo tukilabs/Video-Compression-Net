@@ -5,6 +5,7 @@ from PIL import Image
 import pickle as pkl
 from utils.basics import write_png
 import argparse
+import os
 
 
 def parse_args():
@@ -27,14 +28,18 @@ if __name__ == "__main__":
     testtfnext = tf.placeholder(tf.float32, shape=[1, w, h, 3], name="testsecond_frame")
 
     recon_image, _, estimated_bpp = testnet(testtfprvs, testtfnext)
-    orig = tf.round(tf.convert_to_tensor(tf.reshape(testtfnext, [256, 448, 3])) * 255)
-    rec = tf.round(tf.convert_to_tensor(tf.reshape(recon_image, [256, 448, 3])) * 255)
+    orig = tf.round(tf.convert_to_tensor(tf.reshape(testtfnext, [w, h, 3])) * 255)
+    rec = tf.round(tf.convert_to_tensor(tf.reshape(recon_image, [w, h, 3])) * 255)
 
     mse = tf.reduce_mean(tf.math.squared_difference(orig, rec))
     psnr = tf.squeeze(tf.image.psnr(rec, orig, 255))
     msssim = tf.squeeze(tf.image.ssim_multiscale(rec, orig, 255))
 
     testinit = tf.global_variables_initializer()
+
+    num_frames = 0
+    for item in os.listdir(args.input):
+        num_frames += 1
 
     with tf.Session() as sess:
         sess.run(testinit)
@@ -45,7 +50,7 @@ if __name__ == "__main__":
         tenFirst = np.expand_dims(tenFirst, axis=0)
         sess.run(write_png(args.output + str(1) + ".png", tenFirst))
 
-        for batch in range(2, 8):
+        for batch in range(2, num_frames + 1):
             tenSecond = np.array(Image.open(args.input + 'im' + str(batch) + '.png')).astype(np.float32) * (1.0 / 255.0)
             tenSecond = np.expand_dims(tenSecond, axis=0)
 
