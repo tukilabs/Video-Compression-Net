@@ -8,24 +8,30 @@ from utils.basics import write_png
 import argparse
 import os
 import math
+tf.logging.set_verbosity(tf.logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", "-m", default="checkpoints/alloptimizedvideocomp.pkl",
-                        help="Saved model that you want to decompress with. Should be same"
-                             "as the model used in compression step for better reconstruction")
+                        help="Saved model that you want to decompress with. Should be same\n"
+                             "as the model used in compression step for better reconstruction\n"
+                             "Default=`checkpoints/alloptimizedvideocomp.pkl`")
 
-    parser.add_argument("--input", "-i", default="encoded/",
-                        help="Directory where compressed files lie and what you want to decompress")
+    parser.add_argument("--input", "-i", default="demo/compressed/",
+                        help="Directory where compressed files lie and what you want to decompress\n"
+                             "Default=`demo/compressed/`")
 
-    parser.add_argument("--output", "-o", default="reconstructed/",
-                        help="Directory where you want the reconstructed frames to be saved"
-                             "Warning: Output directory might have previously reconstructed frames"
-                             "which might be deceived as currently reconstructed frames")
+    parser.add_argument("--output", "-o", default="demo/reconstructed/",
+                        help="Directory where you want the reconstructed frames to be saved\n"
+                             "Warning: Output directory might have previously reconstructed frames\n"
+                             "which might be deceived as currently reconstructed frames.\n"
+                             "Default=`demo/reconstructed/`")
 
     parser.add_argument("--frequency", "-f", type=int, default=7,
-                        help="Should be same as that of compressor")
+                        help="Should be same as that of compressor. \n"
+                             "Default=7")
 
 
     parseargs = parser.parse_args()
@@ -34,6 +40,15 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.input[-1] is not '/':
+        args.input += '/'
+
+    if args.output[-1] is not '/':
+        args.output += '/'
+
+    if not os.path.exists(args.output):
+        os.mkdir(args.output)
+
     w, h, _ = np.array(Image.open(args.input + "1.png")).shape
     testnet = VideoCompressor(training=False)
     testtfprvs = tf.placeholder(tf.float32, shape=[1, w, h, 3], name="testfirst_frame")
@@ -46,7 +61,7 @@ if __name__ == "__main__":
     rex_shape = tf.placeholder(tf.int32, [2], name="compressed_residue_lengthx")
     rey_shape = tf.placeholder(tf.int32, [2], name="compressed_residue_lengthy")
 
-    _, _, _ = testnet(testtfprvs, testtfprvs)
+    testnet(testtfprvs, testtfprvs) #required to call call() to call build()
 
     recimage = testnet.decompress(testtfprvs, compflow, cfx_shape, cfy_shape, compres, rex_shape, rey_shape)
 

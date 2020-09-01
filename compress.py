@@ -8,27 +8,32 @@ from utils.basics import write_png
 import math
 import argparse
 import os
-
+tf.logging.set_verbosity(tf.logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", "-m", default="checkpoints/alloptimizedvideocomp.pkl",
-                        help="Saved model that you want to compress with")
+                        help="Saved model that you want to compress with\n"
+                             "Default=`checkpoints/alloptimizedvideocomp.pkl`")
 
-    parser.add_argument("--input", "-i", default="vimeo_septuplet/sequences/00001/0001/",
-                        help="Directory where uncompressed frames lie and what you want to compress")
+    parser.add_argument("--input", "-i", default="demo/input/",
+                        help="Directory where uncompressed frames lie and what you want to compress\n"
+                             "Default=`demo/input/`")
 
-    parser.add_argument("--output", "-o", default="encoded/",
-                        help="Directory where you want the compressed files to be saved"
-                             "Warning: Output directory might have compressed files from"
-                             "previous compression. If number of frames compressed previously"
-                             "is greater than current number of frames then some of the compressed"
-                             "files remains in the directory. During decompression these files"
-                             "are also used for further reconstruction which may have bad output")
+    parser.add_argument("--output", "-o", default="demo/compressed/",
+                        help="Directory where you want the compressed files to be saved\n"
+                             "Warning: Output directory might have compressed files from\n"
+                             "previous compression. If number of frames compressed previously\n"
+                             "is greater than current number of frames then some of the compressed\n"
+                             "files remains in the directory. During decompression these files\n"
+                             "are also used for further reconstruction which may have bad output\n"
+                             "Default=`demo/compressed/`")
 
     parser.add_argument("--frequency", "-f", type=int, default=7,
-                        help="Number of frames after which another image is passed to decoder"
-                             "Should use same frequency during reconstruction")
+                        help="Number of frames after which another image is passed to decoder\n"
+                             "Should use same frequency during reconstruction. \n"
+                             "Default=7")
 
     parseargs = parser.parse_args()
     return parseargs
@@ -36,13 +41,22 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.input[-1] is not '/':
+        args.input += '/'
+
+    if args.output[-1] is not '/':
+        args.output += '/'
+
+    if not os.path.exists(args.output):
+        os.mkdir(args.output)
+
     w, h, _ = np.array(Image.open(args.input + "im1.png")).shape
     testnet = VideoCompressor(training=False)
     testtfprvs = tf.placeholder(tf.float32, shape=[1, w, h, 3], name="testfirst_frame")
     testtfnext = tf.placeholder(tf.float32, shape=[1, w, h, 3], name="testsecond_frame")
     #
     num_pixels = w * h
-    _, _, _ = testnet(testtfprvs, testtfnext)
+    testnet(testtfprvs, testtfnext)  #required to call call() to call build()
     compflow, cfx_shape, cfy_shape, compres, rex_shape, rey_shape, clipped_recon_image = testnet.compress(testtfprvs,
                                                                                                           testtfnext)
     flowtensors = [compflow, cfx_shape, cfy_shape]

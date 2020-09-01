@@ -5,21 +5,55 @@ from .basics import warp
 
 
 class SpyNetwork(tf.keras.layers.Layer):
+    """
+    Spatial Pyramid Network to compute optical flow
+    Original Paper: https://arxiv.org/abs/1611.00850
+    """
     def __init__(self, *args, **kwargs):
+        """
+        Initializer.
+        Arguments:
+          **kwargs: Other keyword arguments passed to superclass tf.keras.layers.Layer.
+        """
         super(SpyNetwork, self).__init__(*args, **kwargs)
 
         class Preprocess(tf.keras.layers.Layer):
+            """
+            Normalizes BGR components.
+            """
             def __init__(self, *arguments, **keywordargs):
+                """Initializer.
+                Arguments:
+                  **kwargs: Other keyword arguments passed to superclass tf.keras.layers.Layer.
+                """
                 super(Preprocess, self).__init__(*arguments, **keywordargs)
 
             def call(self, teninput, **keywordargs):
+                """
+                Arguments:
+                  teninput: A BGR image in range [0,1]
+
+                Returns:
+                    Normalized Image.
+                    The means [0.406, 0.456, 0.485] and std deviation [0.225 0.224 0.229]
+                    of respective colors are obtained from ImageNet dataset. This is true
+                    for all natural images.
+                """
                 tenblue = (teninput[:, :, :, 0:1] - 0.406) / 0.225
                 tengreen = (teninput[:, :, :, 1:2] - 0.456) / 0.224
                 tenred = (teninput[:, :, :, 2:3] - 0.485) / 0.229
                 return tf.concat([tenblue, tengreen, tenred], 3)
 
         class Basic(tf.keras.layers.Layer):
+            """
+            A SPYnet architecture
+            TODO: Fiddle around the number of channels, kernel size, stride and padding if it works better
+            """
             def __init__(self, *arguments, **keywordargs):
+                """Initializer.
+                Arguments:
+                   **kwargs: Other keyword arguments passed to superclass tf.keras.layers.Layer
+                """
                 super(Basic, self).__init__(*arguments, **keywordargs)
 
             def build(self, input_shape):
@@ -44,6 +78,14 @@ class SpyNetwork(tf.keras.layers.Layer):
                 super(Basic, self).build(input_shape)
 
             def call(self, teninput, **keywordargs):
+                """
+                Arguments:
+                    teninput: Input with 8 channels 3-3 each for two consecutive image frame and 2 for
+                    the flow that is initially initialized to 0
+
+                Returns:
+                    Neural Computed flow with 2 channels
+                """
                 return self.netBasic(teninput)
 
         self.netPreprocess = Preprocess()
@@ -80,9 +122,17 @@ class SpyNetwork(tf.keras.layers.Layer):
 
 
 class AnalysisTransform(tf.keras.layers.Layer):
-    """The analysis transform."""
-
+    """
+    Encodes the optical flow and residue to their respective latent representations
+    Based on : https://arxiv.org/abs/1802.01436 by Balle et al.
+    """
     def __init__(self, num_filters, *args, **kwargs):
+        """
+        Initializer.
+        Arguments:
+            num_filters = number of convolutional filters in each intermediate layers
+            *args, **kwargs = Other arguments and keyword arguments passed to superclass
+        """
         self.num_filters = num_filters
         super(AnalysisTransform, self).__init__(*args, **kwargs)
 
@@ -117,9 +167,18 @@ class AnalysisTransform(tf.keras.layers.Layer):
 
 
 class SynthesisTransform(tf.keras.layers.Layer):
-    """The synthesis transform."""
-
+    """
+    Reconstructs the optical flow and residue from their respective latent representations
+    Based on : https://arxiv.org/abs/1802.01436 by Balle et al.
+    """
     def __init__(self, num_channels, num_filters, *args, **kwargs):
+        """
+        Initializer.
+        Arguments:
+            num_channels = number of output channels. 2, 3 for optical flow and residue respectively
+            num_filters = number of convolutional filters in each intermediate layers
+            *args, **kwargs = Other arguments and keyword arguments passed to superclass
+        """
         self.num_filters = num_filters
         self.num_channels = num_channels
         super(SynthesisTransform, self).__init__(*args, **kwargs)
@@ -154,9 +213,18 @@ class SynthesisTransform(tf.keras.layers.Layer):
 
 class ImageCompressor(tf.keras.layers.Layer):
     """
-  """
+    Optical Flow and/or Residue compression
+    Uses EntropyBottleneck class from https://github.com/tensorflow/compression/
+    for bitrate estimation and Entrppy coding
+    """
 
     def __init__(self, num_channels, num_filters, training=True, *args, **kwargs):
+        """
+        num_channels = number of output channels. 2, 3 for optical flow and residue respectively
+        num_filters = number of convolutional filters in each intermediate layers
+        training = True for training and False for evaluation
+        *args, **kwargs = Other arguments and keyword arguments passed to superclass
+        """
         self.num_filters = num_filters
         self.num_channels = num_channels
         self.training = training
@@ -196,8 +264,19 @@ class ImageCompressor(tf.keras.layers.Layer):
 
 class VideoCompressor(tf.keras.layers.Layer):
     """
+    Computes the optical flow between consecutive frames, compress the thus obtained optical flow,
+    decompress the compressed optical flow, warps previously reconstructed image with the decompressed
+    optical flow to obtain motion compensated frame. Compress the mismatch in motion compensated frame
+    and original frame and decompress it to obtain reconstructed residue. Sum reconstructed optical flow
+    and residue to obtain reconstructed frame. To train the network, objective should be to minimize the
+    weighted sum of distortion (mismatch in original frame and reconstructed frame) and bitrate of compressed
+    optical flow and residue
     """
     def __init__(self, training=True, *args, **kwargs):
+        """
+        training = True for training and False for evaluation
+        *args, **kwargs = Other arguments and keyword arguments passed to superclass
+        """
         self.training = training
         super(VideoCompressor, self).__init__(*args, **kwargs)
 
@@ -216,6 +295,9 @@ class VideoCompressor(tf.keras.layers.Layer):
         recon_image = motionCompensated + reconres[0]
         clipped_recon_image = tf.clip_by_value(recon_image, 0, 1)
         mse_loss = tf.reduce_mean(tf.math.squared_difference(recon_image, tensecond))
+        # mse_loss = 1 - tf.math.reduce_mean(tf.image.ssim_multiscale(clipped_recon_image, tensecond, max_val=1))
+        # comment the uncommented mse_loss and uncomment the commented mse_loss to use MS-SSIM as recontruction loss
+        # rather than MSE loss
         total_bits_feature = reconres[1] + reconflow[1]
         batch_size, height, width, _ = prevreconstructed.shape
         bpp_feature = tf.divide(tf.cast(total_bits_feature, tf.float32),

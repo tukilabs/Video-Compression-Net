@@ -6,22 +6,36 @@ import pickle as pkl
 from utils.basics import write_png
 import argparse
 import os
+tf.logging.set_verbosity(tf.logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", "-m", default="checkpoints/tfvideocomp.pkl",
-                        help="Saved model that you want to test with")
-    parser.add_argument("--input", "-i", default="vimeo_septuplet/sequences/00001/0001/",
-                        help="Directory where uncompressed frames lie and what you want to compress")
-    parser.add_argument("--output", "-o", default="outputs/",
-                        help="Directory where you want the reconstructed frames to be saved")
+                        help="Saved model that you want to test with\n"
+                             "Default=`checkpoints/tfvideocomp.pkl`")
+    parser.add_argument("--input", "-i", default="demo/input/",
+                        help="Directory where uncompressed frames lie and what you want to compress\n"
+                             "Default=`demo/input/`")
+    parser.add_argument("--output", "-o", default="demo/reconstructed/",
+                        help="Directory where you want the reconstructed frames to be saved. \n"
+                             "Default=`demo/reconstructed/`")
     parseargs = parser.parse_args()
     return parseargs
 
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.input[-1] is not '/':
+        args.input += '/'
+
+    if args.output[-1] is not '/':
+        args.output += '/'
+
+    if not os.path.exists(args.output):
+        os.mkdir(args.output)
+
     w, h, _ = np.array(Image.open(args.input + "im1.png")).shape
     testnet = VideoCompressor(training=False)
     testtfprvs = tf.placeholder(tf.float32, shape=[1, w, h, 3], name="testfirst_frame")

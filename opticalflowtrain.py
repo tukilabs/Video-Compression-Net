@@ -1,23 +1,64 @@
 from utils.network import SpyNetwork
 from utils.basics import warp
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import os
 import numpy as np
 from PIL import Image
 import math
 import pickle as pkl
+import argparse
+tf.logging.set_verbosity(tf.logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--chkfile", "-c", default="checkpoints/oftrain.chk",
+                        help="Checkpointing file\n"
+                             "Default=`checkpoints/oftrain.chk`")
+
+    parser.add_argument("--pklfile", "-p", default="checkpoints/oftrain.pkl",
+                        help="Pkl file to save weights of the trained network\n"
+                             "Default=`checkpoints/oftrain.pkl`")
+
+    parser.add_argument("--input", "-i", default="vimeo_septuplet/sequences/",
+                        help="Directory where training data lie. The structure of the directory should be like:\n"
+                             "vimeo_septuplet/sequences/00001/\n"
+                             "vimeo_septuplet/sequences/00002\n"
+                             "...............................\n"
+                             "For each vimeo_septuplet/sequences/x there should be subfolders like:\n"
+                             "00001/0001\n"
+                             "00001/002\n"
+                             ".........\n"
+                             "Check vimeo_septuplet folder. \n"
+                             "Download dataset for more information. For other dataset, you can parse the input\n"
+                             "in your own way\n"
+                             "Default=`vimeo_septuplet/sequences/`")
+
+    parser.add_argument("--frequency", "-f", type=int, default=25,
+                        help="Number of steps to saving the checkpoints\n"
+                             "Default=25")
+
+
+    parser.add_argument("--restore", "-r", action="store_true",
+                        help="Whether to restore the checkpoints to continue interrupted training, OR\n"
+                             "Start training from the beginning")
+
+    parseargs = parser.parse_args()
+    return parseargs
+
 
 
 if __name__ == "__main__":
+    args = parse_args()
     filepath = "checkpoints/tfof.chk"
-    checkpointFrequency = 25
     direc = "vimeo_septuplet/sequences/"
     subdircount = 0
 
     for item in os.listdir(direc):
         subdircount += 1
 
-    starting = True
+    starting = args.restore
 
     spy = SpyNetwork()
 
@@ -34,16 +75,16 @@ if __name__ == "__main__":
 
     increment_directory = tf.assign(directory, directory + 1)
     init_video_batch_updater = tf.assign(tfvideo_batch, 0)
+    init_directory_updater = tf.assign(directory, 1)
+
     init = tf.global_variables_initializer()
 
     saver = tf.train.Saver()
 
     with tf.Session() as sess:
         sess.run(init)
-        with open("checkpoints/spymodeltf.pkl", "rb") as f:
-            spy.set_weights(pkl.load(f))
         if starting:
-            saver.restore(sess, filepath)
+            saver.restore(sess, args.chkfile)
 
         load_dir = directory.eval()
 
@@ -78,7 +119,15 @@ if __name__ == "__main__":
                 increment_video_batch.op.run()
                 print("recon loss = {:.8f} video = {}, directory = {}".format(loss, video_batch, i))
                 # print(tfvideo_batch.eval(), directory.eval())
-                if video_batch % checkpointFrequency == 0:
-                    weights = spy.get_weights()
-                    pkl.dump(weights, open("checkpoints/spymodeltf.pkl", "wb"))
-                    saver.save(sess, filepath)
+                if video_batch % args.frequency == 0:
+                    pkl.dump(spy.get_weights(), open(args.pklfile, "wb"))
+                    saver.save(sess, args.chkfile)
+
+                pkl.dump(spy.get_weights(), open(args.pklfile, "wb"))
+                saver.save(sess, args.chkfile)
+
+                init_video_batch_updater.op.run()
+                increment_directory.op.run()
+
+            init_directory_updater.op.run()
+

@@ -115,6 +115,9 @@ def interpolate_bilinear(grid, query_points, indexing="ij"):
 
 
 def warp(teninput, tenflow):
+    """
+    warps image with dense flow to obtain motion compensated frame
+    """
     batch_size, height, width, channels = (
         tf.shape(teninput)[0],
         tf.shape(teninput)[1],
@@ -134,6 +137,7 @@ def warp(teninput, tenflow):
 
 
 def quantize_image(image):
+    """Changes the range of pixel values to [0, 255] and cast it into uint8"""
     image = np.reshape(image, (image.shape[1], image.shape[2], 3))
     image = tf.convert_to_tensor(image)
     image = tf.round(image * 255)
