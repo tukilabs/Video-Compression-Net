@@ -12,9 +12,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", "-m", default="checkpoints/tfvideocomp.pkl",
+    parser.add_argument("--model", "-m", default="checkpoints/videocompressor1024.pkl",
                         help="Saved model that you want to test with\n"
-                             "Default=`checkpoints/tfvideocomp.pkl`")
+                             "Default=`checkpoints/videocompressor1024.pkl`")
     parser.add_argument("--input", "-i", default="demo/input/",
                         help="Directory where uncompressed frames lie and what you want to compress\n"
                              "Default=`demo/input/`")
