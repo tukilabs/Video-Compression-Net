@@ -24,7 +24,7 @@ python compress.py -i demo/input/ -o demo/compressed/ -m checkpoints/videocompre
 ```
 The execution compresses the frames in `demo/input/` to compressed files in `demo/compressed/`. 
 
-**Note: Right now, our work is only applicable to the RGB frames with height and width <= 512. To compress the frames with higher resolution, increase the depth of the pyramid (change `self.netBasic = [Basic() for _ in range(5)]` in [network.py](https://github.com/tukilabs/Video-Compression-Net/blob/master/utils/network.py) to `self.netBasic = [Basic() for _ in range(6)]` and train the network. Needless to say, higher resolution images require more time to train, compress and decompress**
+**Note: Right now, our work is only applicable to the RGB frames with height and width <= 512 and both being multiple of 16. To compress the frames with higher resolution, increase the depth of the pyramid (change `self.netBasic = [Basic() for _ in range(5)]` in [network.py](https://github.com/tukilabs/Video-Compression-Net/blob/master/utils/network.py) to `self.netBasic = [Basic() for _ in range(6)]` and train the network. Needless to say, higher resolution images require more time to train, compress and decompress**
 
 ## Reconstruction
 Run the following command and follow the instructions:
