@@ -64,6 +64,17 @@ python test.py -m checkpoints/videocompressor256-msssim.pkl
 ![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/demo.gif)<br/>
 ***Note: The compression and reconstruction without GPU will be slower than the above demonstration.***
 
+## Visualization
+![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/visualization/first.png)
+![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/visualization/second.png)
+![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/visualization/flow.png)
+![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/visualization/reconflow.png)
+![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/visualization/motioncompensated.png)
+![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/visualization/residue.png)
+![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/visualization/reconresidue.png)
+![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/visualization/reconstructed.png)
+<br/>*The  images are first frame, second frame, optical flow, reconstructed optical flow, motion compensated frame, residue, reconstructed residue and reconstructed frame respectively.*
+
 ## Authors
 [Prasanga Dhungel](https://github.com/PrasangaDhungel)<br/>
 [Prashant Tandan](https://github.com/Prashant528)<br/>
