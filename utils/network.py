@@ -98,21 +98,25 @@ class SpyNetwork(tf.keras.layers.Layer):
         tenfirst = [self.netPreprocess(tenfirst)]
         tensecond = [self.netPreprocess(tensecond)]
 
-        for intLevel in range(5):
+        if max(tenfirst[0].shape[1], tenfirst[0].shape[2]) > 512:
+            num_layer = 4
+        else:
+            num_layer = 5
+
+        for intLevel in range(num_layer):
             if tenfirst[0].shape[1] > 32 or tenfirst[0].shape[2] > 32:
                 tenfirst.insert(0, tf.keras.layers.AveragePooling2D(pool_size=2)(tenfirst[0]))
                 tensecond.insert(0, tf.keras.layers.AveragePooling2D(pool_size=2)(tensecond[0]))
 
         tenflow = tf.zeros([tenfirst[0].shape[0], tenfirst[0].shape[1] // 2, tenfirst[0].shape[2] // 2, 2])
 
-        for intLevel in range(len(tenfirst)):
+        for intLevel in range(min(len(tenfirst), 5)):
             tenupsampled = tf.image.resize_bilinear(tenflow, [tenflow.shape[1] * 2, tenflow.shape[2] * 2]) * 2.0
 
             if tenupsampled.shape[1] != tenfirst[intLevel].shape[1] or tenupsampled.shape[2] != tenfirst[intLevel].shape[2]:
                 tenupsampled = tf.pad(tenupsampled, [[0, 0], [tenfirst[intLevel].shape[1] - tenupsampled.shape[1], 0],
                                                      [tenfirst[intLevel].shape[2] - tenupsampled.shape[2], 0],[0, 0]],
                                       "SYMMETRIC")
-
             tenflow = self.netBasic[intLevel](
                 tf.concat(
                     [tenfirst[intLevel], warp(tensecond[intLevel], -tenupsampled), tenupsampled], 3)
