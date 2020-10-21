@@ -1,9 +1,8 @@
 import tensorflow.compat.v1 as tf
-from utils.network import VideoCompressor
+from utils import VideoCompressor, write_png
 import numpy as np
 from PIL import Image
 import pickle as pkl
-from utils.basics import write_png
 import argparse
 import os
 tf.logging.set_verbosity(tf.logging.ERROR)

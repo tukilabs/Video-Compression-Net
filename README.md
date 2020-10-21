@@ -60,6 +60,9 @@ For example,
 python test.py -m checkpoints/videocompressor256-msssim.pkl
 ```
 
+## Experiments
+Experimental results are available at the [evaluation](https://github.com/tukilabs/Video-Compression-Net/tree/master/evaluation)
+
 ## Demo
 ![](https://github.com/tukilabs/Video-Compression-Net/blob/master/demo/demo.gif)<br/>
 ***Note: The compression and reconstruction without GPU will be slower than the above demonstration.***

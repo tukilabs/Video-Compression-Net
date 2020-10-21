@@ -1,4 +1,4 @@
-The following figures show the comparison between our models and H.264, H.265 and DVC. The related outputs of the evaluation for [UVG](http://ultravideo.cs.tut.fi/#testsequences) datasets can be found [here](https://drive.google.com/drive/folders/1R-jnkocZ2Xe-tCq99gcmm1Nr8bvCaTCk?usp=sharing) 
+The following figures show the comparison between our models and H.264, H.265 and DVC. The related outputs of the evaluation for [UVG](http://ultravideo.cs.tut.fi/#testsequences) datasets can be found [here](https://drive.google.com/drive/folders/1R-jnkocZ2Xe-tCq99gcmm1Nr8bvCaTCk?usp=sharing). 
 The files for JCT-VC dataset aren't made public due to copyright issues.
 
 <p float="left">

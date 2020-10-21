@@ -1,9 +1,8 @@
 import tensorflow.compat.v1 as tf
-from utils.network import VideoCompressor
+from utils import VideoCompressor, write_png, warp
 import numpy as np
 from PIL import Image
 import pickle as pkl
-from utils.basics import write_png, warp
 import cv2
 import argparse
 import os

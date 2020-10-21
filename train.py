@@ -1,5 +1,5 @@
 import tensorflow.compat.v1 as tf
-from utils.network import VideoCompressor
+from utils import VideoCompressor
 import numpy as np
 from PIL import Image
 import os

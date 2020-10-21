@@ -1,7 +1,7 @@
 import tensorflow.compat.v1 as tf
 import tensorflow_compression as tfc
 import numpy as np
-from .basics import warp
+from utils import warp
 
 
 class SpyNetwork(tf.keras.layers.Layer):

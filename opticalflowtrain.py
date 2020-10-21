@@ -1,5 +1,4 @@
-from utils.network import SpyNetwork
-from utils.basics import warp
+from utils import warp, SpyNetwork
 import tensorflow.compat.v1 as tf
 import os
 import numpy as np
