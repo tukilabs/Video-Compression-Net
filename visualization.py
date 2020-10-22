@@ -87,6 +87,10 @@ if __name__ == "__main__":
         os.mkdir(args.output)
 
     w, h, _ = np.array(Image.open(args.input + "im1.png")).shape
+
+    if w % 16 != 0 or h % 16 != 0:
+        raise ValueError('Height and Width must be mutiples of 16.')
+
     testnet = VideoCompressor(training=False)
     testtfprvs = tf.placeholder(tf.float32, shape=[1, w, h, 3], name="testfirst_frame")
     testtfnext = tf.placeholder(tf.float32, shape=[1, w, h, 3], name="testsecond_frame")

@@ -52,6 +52,9 @@ if __name__ == "__main__":
     testnet = VideoCompressor(training=False)
     testtfprvs = tf.placeholder(tf.float32, shape=[1, w, h, 3], name="testfirst_frame")
 
+    if w % 16 != 0 or h % 16 != 0:
+        raise ValueError('Height and Width must be mutiples of 16.')
+
     compflow = tf.placeholder(tf.string, [1], name="compressed_of_string")
     cfx_shape = tf.placeholder(tf.int32, [2], name="compressed_of_lengthx")
     cfy_shape = tf.placeholder(tf.int32, [2], name="compressed_of_lengthy")
