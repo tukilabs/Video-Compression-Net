@@ -77,16 +77,11 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    if args.input[-1] is not '/':
-        args.input += '/'
-
-    if args.output[-1] is not '/':
-        args.output += '/'
 
     if not os.path.exists(args.output):
         os.mkdir(args.output)
 
-    w, h, _ = np.array(Image.open(args.input + "im1.png")).shape
+    w, h, _ = np.array(Image.open(os.path.join(args.input, 'im1.png'))).shape
 
     if w % 16 != 0 or h % 16 != 0:
         raise ValueError('Height and Width must be mutiples of 16.')
@@ -111,9 +106,9 @@ if __name__ == "__main__":
         with open(args.model, "rb") as f:
             testnet.set_weights(pkl.load(f))
 
-        tenFirst = np.array(Image.open(args.input + 'im1.png')).astype(np.float32) * (1.0 / 255.0)
+        tenFirst = np.array(Image.open(os.path.join(args.input,'im1.png'))).astype(np.float32) * (1.0 / 255.0)
         tenFirst = np.expand_dims(tenFirst, axis=0)
-        tenSecond = np.array(Image.open(args.input + 'im2.png')).astype(np.float32) * (1.0 / 255.0)
+        tenSecond = np.array(Image.open(os.path.join(args.input,'im1.png'))).astype(np.float32) * (1.0 / 255.0)
         tenSecond = np.expand_dims(tenSecond, axis=0)
 
         realflow, realreconflow, realmotcom, realres, realreconres, realimage = sess.run([flow, reconflow, motionCompensated,
@@ -123,13 +118,11 @@ if __name__ == "__main__":
 
         realflow = flow_to_img(realflow)
         realreconflow = flow_to_img(realreconflow)
-        sess.run(write_png(args.output + "flow.png", realflow))
-        sess.run(write_png(args.output + "reconflow.png", realreconflow))
-        # pkl.dump(np.squeeze(realflow, axis=0), open(args.output + "of.flo", "wb"))
-        # pkl.dump(np.squeeze(realreconflow, axis=0), open(args.output + "reconof.flo", "wb"))
-        sess.run(write_png(args.output + "first.png", tenFirst))
-        sess.run(write_png(args.output + "second.png", tenSecond))
-        sess.run(write_png(args.output + "motioncompensated.png", realmotcom))
-        sess.run(write_png(args.output + "residue.png", realres))
-        sess.run(write_png(args.output + "reconresidue.png", realreconres))
-        sess.run(write_png(args.output + "reconstructed.png", realimage))
+        sess.run(write_png(os.path.join(args.output, 'first.png'), tenFirst))
+        sess.run(write_png(os.path.join(args.output , 'second.png'), tenSecond))
+        sess.run(write_png(os.path.join(args.output,'flow.png'), realflow))
+        sess.run(write_png(os.path.join(args.output,'reconflow.png'), realreconflow))
+        sess.run(write_png(os.path.join(args.output , 'motioncompensated.png'), realmotcom))
+        sess.run(write_png(os.path.join(args.output , 'residue.png'), realres))
+        sess.run(write_png(os.path.join(args.output , 'reconresidue.png'), realreconres))
+        sess.run(write_png(os.path.join(args.output , 'reconstructed.png'), realimage))

@@ -39,16 +39,11 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    if args.input[-1] is not '/':
-        args.input += '/'
-
-    if args.output[-1] is not '/':
-        args.output += '/'
 
     if not os.path.exists(args.output):
         os.mkdir(args.output)
 
-    w, h, _ = np.array(Image.open(args.input + "1.png")).shape
+    w, h, _ = np.array(Image.open(os.path.join(args.input + "1.png"))).shape
     testnet = VideoCompressor(training=False)
     testtfprvs = tf.placeholder(tf.float32, shape=[1, w, h, 3], name="testfirst_frame")
 
@@ -83,7 +78,7 @@ if __name__ == "__main__":
 
         batch_range = args.frequency + 1
         for i in range(math.ceil(num_frames/args.frequency)):
-            tenFirst = np.array(Image.open(args.input + str(i * args.frequency + 1) + '.png')).astype(np.float32) * (1.0 / 255.0)
+            tenFirst = np.array(Image.open(os.path.join(args.input , str(i * args.frequency + 1) + '.png'))).astype(np.float32) * (1.0 / 255.0)
             tenFirst = np.expand_dims(tenFirst, axis=0)
             sess.run(write_png(args.output + str(i * args.frequency +1) + ".png", tenFirst))
 
@@ -91,9 +86,9 @@ if __name__ == "__main__":
                 batch_range = num_frames % args.frequency + 1
 
             for batch in range(2, batch_range):
-                with open(args.input + "/of" + str(i * args.frequency + batch - 1) + ".vcn", "rb") as f:
+                with open(os.path.join(args.input, 'of' + str(i * args.frequency + batch - 1) + '.vcn'), "rb") as f:
                     flowpacked = tfc.PackedTensors(f.read())
-                with open(args.input + "res" + str(i * args.frequency + batch - 1) + ".vcn", "rb") as f:
+                with open(os.path.join(args.input, "res" + str(i * args.frequency + batch - 1) + '.vcn'), "rb") as f:
                     respacked = tfc.PackedTensors(f.read())
 
                 flowtensors = [compflow, cfx_shape, cfy_shape]
@@ -105,4 +100,4 @@ if __name__ == "__main__":
                 fd.update(dict(zip(restensors, resarrays)))
                 fd.update(dict({testtfprvs: tenFirst}))
                 tenFirst = sess.run(recimage, feed_dict=fd)
-                sess.run(write_png(args.output + str(i * args.frequency + batch) + ".png", tenFirst))
+                sess.run(write_png(os.path.join(args.output, str(i * args.frequency + batch) + '.png'), tenFirst))

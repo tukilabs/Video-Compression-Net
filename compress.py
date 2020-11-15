@@ -40,16 +40,11 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    if args.input[-1] is not '/':
-        args.input += '/'
-
-    if args.output[-1] is not '/':
-        args.output += '/'
 
     if not os.path.exists(args.output):
         os.mkdir(args.output)
 
-    w, h, _ = np.array(Image.open(args.input + "im1.png")).shape
+    w, h, _ = np.array(Image.open(os.path.join(args.input , "im1.png"))).shape
 
     if w % 16 != 0 or h % 16 != 0:
         raise ValueError('Height and Width must be mutiples of 16.')
@@ -70,9 +65,7 @@ if __name__ == "__main__":
 
     testinit = tf.global_variables_initializer()
 
-    num_frames = 0
-    for item in os.listdir(args.input):
-        num_frames += 1
+    num_frames = len(os.listdir(args.input))
 
     with tf.Session() as sess:
         sess.run(testinit)
@@ -81,16 +74,16 @@ if __name__ == "__main__":
 
         batch_range = args.frequency + 1
         for i in range(math.ceil(num_frames / args.frequency)):
-            tenFirst = np.array(Image.open(args.input + 'im' + str(i * args.frequency + 1) + '.png')).astype(
+            tenFirst = np.array(Image.open(os.path.join(args.input , 'im' + str(i * args.frequency + 1) + '.png'))).astype(
                 np.float32) * (1.0 / 255.0)
             tenFirst = np.expand_dims(tenFirst, axis=0)
-            sess.run(write_png(args.output + str(i * args.frequency + 1) + ".png", tenFirst))
+            sess.run(write_png(os.path.join(args.output , str(i * args.frequency + 1) + '.png'), tenFirst))
 
             if i == math.ceil(num_frames / args.frequency) - 1 and num_frames % args.frequency != 0:
                 batch_range = num_frames % args.frequency + 1
 
             for batch in range(2, batch_range):
-                tenSecond = np.array(Image.open(args.input + '/im' + str(i * args.frequency + batch) + '.png')).astype(
+                tenSecond = np.array(Image.open(os.path.join(args.input , 'im' + str(i * args.frequency + batch) + '.png'))).astype(
                     np.float32) * (1.0 / 255.0)
                 tenSecond = np.expand_dims(tenSecond, axis=0)
 
@@ -100,12 +93,12 @@ if __name__ == "__main__":
 
                 flowpacked = tfc.PackedTensors()
                 flowpacked.pack(flowtensors, array_of)
-                with open(args.output + "of" + str(i * args.frequency + batch - 1) + ".vcn", "wb") as f:
+                with open(os.path.join(args.output, "of" + str(i * args.frequency + batch - 1) + ".vcn"), "wb") as f:
                     f.write(flowpacked.string)
 
                 respacked = tfc.PackedTensors()
                 respacked.pack(restensors, array_res)
-                with open(args.output + "res" + str(i * args.frequency + batch - 1) + ".vcn", "wb") as f:
+                with open(os.path.join(args.output , "res" + str(i * args.frequency + batch - 1) + ".vcn"), "wb") as f:
                     f.write(respacked.string)
 
                 print("Actual_bpp = {:.8f}".format(((len(flowpacked.string) + len(respacked.string)) * 8 / num_pixels)))

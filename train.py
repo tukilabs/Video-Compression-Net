@@ -53,13 +53,14 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     net = VideoCompressor()
-    subdircount = 0
+    subdircount = len(os.listdir(args.input))
 
-    if args.input[-1] is not '/':
-        args.input += '/'
-
-    for item in os.listdir(args.input):
-        subdircount += 1
+    # if args.input[-1] is not '/':
+    #     args.input += '/'
+    #
+    #
+    # for item in os.listdir(args.input):
+    #     subdircount += 1
 
     tfprvs = tf.placeholder(tf.float32, shape=[4, 256, 448, 3], name="first_frame")
     tfnext = tf.placeholder(tf.float32, shape=[4, 256, 448, 3], name="second_frame")
@@ -99,10 +100,10 @@ if __name__ == "__main__":
         load_dir = directory.eval() if starting else 1
 
         for i in range(load_dir, subdircount + 1):
-            subdir = args.input + str(i).zfill(5) + '/'
-            subsubdircount = 0
-            for item in os.listdir(subdir):
-                subsubdircount += 1
+            subdir = os.path.join(args.input, str(i).zfill(5))
+            subsubdircount = len(os.listdir(subdir))
+            # for item in os.listdir(subdir):
+            #     subsubdircount += 1
 
             start_video_batch = tfvideo_batch.eval() if starting else 0
 
@@ -120,11 +121,11 @@ if __name__ == "__main__":
 
             for video_batch in range(start_video_batch, num_video_batch):
                 for batch in range(1, 8):
-                    bat = subdir + str(4 * video_batch + 1).zfill(4) + '/im' + str(batch) + '.png'
+                    bat = os.path.join(subdir, str(4 * video_batch + 1).zfill(4), 'im' + str(batch) + '.png')
                     bat = np.array(Image.open(bat)).astype(np.float32) * (1.0 / 255.0)
                     bat = np.expand_dims(bat, axis=0)
                     for item in range(2, 5):
-                        img = subdir + str(4 * video_batch + item).zfill(4) + '/im' + str(batch) + '.png'
+                        img = os.path.join(subdir, str(4 * video_batch + item).zfill(4), 'im' + str(batch) + '.png')
                         img = np.array(Image.open(img)).astype(np.float32) * (1.0 / 255.0)
                         img = np.expand_dims(img, axis=0)
                         bat = np.concatenate((bat, img), axis=0)

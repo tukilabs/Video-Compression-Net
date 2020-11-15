@@ -31,8 +31,7 @@ if __name__ == "__main__":
     if args.input[-1] is not '/':
         args.input += '/'
 
-
-    w, h, _ = np.array(Image.open(args.input + "im1.png")).shape
+    w, h, _ = np.array(Image.open(os.path.join(args.input , "im1.png"))).shape
 
     if w % 16 != 0 or h % 16 != 0:
         raise ValueError('Height and Width must be mutiples of 16.')
@@ -52,9 +51,7 @@ if __name__ == "__main__":
     testinit = tf.global_variables_initializer()
 
 
-    num_frames = 0
-    for item in os.listdir(args.input):
-        num_frames += 1
+    num_frames = len(os.listdir(args.input))
 
     with tf.Session() as sess:
         sess.run(testinit)
@@ -68,14 +65,14 @@ if __name__ == "__main__":
 
         batch_range = args.gop + 1
         for i in range(math.ceil(num_frames / args.gop)):
-            tenFirst = np.array(Image.open(args.input + 'im' + str(i * args.gop + 1) + '.png')).astype(np.float32) * (1.0 / 255.0)
+            tenFirst = np.array(Image.open(os.join.path(args.input , 'im' + str(i * args.gop + 1) + '.png'))).astype(np.float32) * (1.0 / 255.0)
             tenFirst = np.expand_dims(tenFirst, axis=0)
 
             if i == math.ceil(num_frames / args.gop) - 1 and num_frames % args.gop != 0:
                 batch_range = num_frames % args.gop + 1
 
             for batch in range(2, batch_range):
-                tenSecond = np.array(Image.open(args.input + 'im' + str(batch) + '.png')).astype(np.float32) * (1.0 / 255.0)
+                tenSecond = np.array(Image.open(os.path.join(args.input , 'im' + str(batch) + '.png'))).astype(np.float32) * (1.0 / 255.0)
                 tenSecond = np.expand_dims(tenSecond, axis=0)
 
                 reconimage, recloss, ps, msim, rate = sess.run([recon_image, mse, psnr, msssim, estimated_bpp],

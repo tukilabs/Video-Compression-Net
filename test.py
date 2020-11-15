@@ -26,16 +26,11 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    if args.input[-1] is not '/':
-        args.input += '/'
-
-    if args.output[-1] is not '/':
-        args.output += '/'
 
     if not os.path.exists(args.output):
         os.mkdir(args.output)
 
-    w, h, _ = np.array(Image.open(args.input + "im1.png")).shape
+    w, h, _ = np.array(Image.open(os.path.join(args.input , "im1.png"))).shape
 
     if w % 16 != 0 or h % 16 != 0:
         raise ValueError('Height and Width must be mutiples of 16.')
@@ -54,21 +49,19 @@ if __name__ == "__main__":
 
     testinit = tf.global_variables_initializer()
 
-    num_frames = 0
-    for item in os.listdir(args.input):
-        num_frames += 1
+    num_frames = len(os.listdir(args.input))
 
     with tf.Session() as sess:
         sess.run(testinit)
         with open(args.model, "rb") as f:
             testnet.set_weights(pkl.load(f))
 
-        tenFirst = np.array(Image.open(args.input + 'im' + str(1) + '.png')).astype(np.float32) * (1.0 / 255.0)
+        tenFirst = np.array(Image.open(os.path.join(args.input , 'im' + str(1) + '.png'))).astype(np.float32) * (1.0 / 255.0)
         tenFirst = np.expand_dims(tenFirst, axis=0)
-        sess.run(write_png(args.output + str(1) + ".png", tenFirst))
+        sess.run(write_png(os.path.join(args.output , str(1) + ".png"), tenFirst))
 
         for batch in range(2, num_frames + 1):
-            tenSecond = np.array(Image.open(args.input + 'im' + str(batch) + '.png')).astype(np.float32) * (1.0 / 255.0)
+            tenSecond = np.array(Image.open(os.path.join(args.input, 'im' + str(batch) + '.png'))).astype(np.float32) * (1.0 / 255.0)
             tenSecond = np.expand_dims(tenSecond, axis=0)
 
             reconimage, recloss, ps, ms, rate = sess.run([recon_image, mse, psnr, msssim, estimated_bpp],
@@ -76,4 +69,4 @@ if __name__ == "__main__":
             tenFirst = reconimage
 
             print("recon loss = {:.8f}, psnr = {:.8f}, msssim = {:.8f}, bpp = {:.8f}".format(recloss, ps, ms, rate))
-            sess.run(write_png(args.output + str(batch) + ".png", reconimage))
+            sess.run(write_png(os.path.join(args.output, str(batch) + ".png"), reconimage))

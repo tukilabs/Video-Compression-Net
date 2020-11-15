@@ -52,10 +52,10 @@ if __name__ == "__main__":
     args = parse_args()
     filepath = "checkpoints/tfof.chk"
     direc = "vimeo_septuplet/sequences/"
-    subdircount = 0
+    subdircount = len(os.listdir(direc))
 
-    for item in os.listdir(direc):
-        subdircount += 1
+    # for item in os.listdir(direc):
+    #     subdircount += 1
 
     starting = args.restore
 
@@ -88,10 +88,10 @@ if __name__ == "__main__":
         load_dir = directory.eval()
 
         for i in range(load_dir, subdircount + 1):
-            subdir = direc + str(i).zfill(5) + '/'
-            subsubdircount = 0
-            for item in os.listdir(subdir):
-                subsubdircount += 1
+            subdir = os.path.join(direc, str(i).zfill(5))
+            subsubdircount = len(os.listdir(subdir))
+            # for item in os.listdir(subdir):
+            #     subsubdircount += 1
 
             start_video_batch = tfvideo_batch.eval() if starting else 0
             num_video_batch = math.floor(subsubdircount / 4)
@@ -99,11 +99,11 @@ if __name__ == "__main__":
 
             for video_batch in range(start_video_batch, num_video_batch):
                 for batch in range(1, 8):
-                    bat = subdir + str(4 * video_batch + 1).zfill(4) + '/im' + str(batch) + '.png'
+                    bat = os.path.join(subdir, str(4 * video_batch + 1).zfill(4), 'im' + str(batch) + '.png')
                     bat = np.array(Image.open(bat)).astype(np.float32) * (1.0 / 255.0)
                     bat = np.reshape(bat, (1, 256, 448, 3))
                     for item in range(2, 5):
-                        img = subdir + str(4 * video_batch + item).zfill(4) + '/im' + str(batch) + '.png'
+                        img = os.path.join(subdir, str(4 * video_batch + item).zfill(4), 'im' + str(batch) + '.png')
                         img = np.array(Image.open(img)).astype(np.float32) * (1.0 / 255.0)
                         img = np.reshape(img, (1, 256, 448, 3))
                         bat = np.concatenate((bat, img), axis=0)
