@@ -1,6 +1,16 @@
 # Video-Compression-Net
 This project presents the Neural architecture to compress videos (sequence of image frames) along with the pre-trained models. Our work is inspired by [DVC](https://github.com/GuoLusjtu/DVC) and we use [tensorflow-compression](https://github.com/tensorflow/compression/) for bitrate estimation and entropy compression. Compression is realized in terms of actual file size.
-
+## Citation
+If you find our paper useful, please cite:
+```
+@inproceedings{dhungel2020efficient,
+  title={An Efficient Video Compression Network},
+  author={Dhungel, Prasanga and Tandan, Prashant and Bhusal, Sandesh and Neupane, Sobit and Shakya, Subama},
+  booktitle={2020 2nd International Conference on Advances in Computing, Communication Control and Networking (ICACCCN)},
+  pages={1028--1034},
+  year={2020},
+  organization={IEEE}
+```
 ## Installation
 For installation, simply run the following command:
 ```bash
